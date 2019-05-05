@@ -1,0 +1,13 @@
+---
+- name: Wait for VM
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: wait for the power up to complete
+      local_action:
+        module: wait_for
+          host={{ inventory_hostname }}
+          port=22
+          delay=30
+      become: false

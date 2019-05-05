@@ -1,0 +1,5 @@
+- import_playbook: displaycluster.yml
+- import_playbook: genesis.yml
+- import_playbook: genpwd.yml
+- import_playbook: waitforvm.yml
+- import_playbook: cleanup.yml

@@ -1,0 +1,15 @@
+---
+- name: Display Nutanix cluster(s)
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: determine if there is more than one cluster
+      debug: msg="[{{ item.0 }}] {{ item.1 }}"
+      with_indexed_items: "{{ nutanixcluster }}"
+      when: 
+        - nutanixcluster is defined
+      loop_control:
+        label: "{{ item.0 }}"
+      run_once: true

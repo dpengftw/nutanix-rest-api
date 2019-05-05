@@ -1,0 +1,55 @@
+---
+- name: Power on/off VM in Nutanix
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars_files:
+    - ../../inventory/common/vault-common-vars.yml
+
+  vars:
+    base_url: "https://{{ nutanixcluster }}:9440/PrismGateway/services/rest/v2.0"
+
+  vars_prompt:
+    - name: "host"
+      prompt: "which host? "
+      private: no
+    - name: "state"
+      prompt: "power on or off? "
+      private: no
+
+  tasks:
+    - name: get all hosts
+      uri:
+        url: "{{ base_url }}/vms/"
+        validate_certs: no
+        force_basic_auth: yes
+        method: GET
+        status_code: 200
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        body_format: json
+        return_content: yes
+      register: hostinfo
+
+    - name: uuid of host
+      set_fact: uuid="{{ item.uuid }}"
+      when: host in item.name
+      with_items: "{{ hostinfo.json.entities }}"
+
+    - fail: msg="Unable to find {{ host }}"
+      when: uuid is not defined
+
+    - name: power host
+      uri:
+        url: "{{ base_url }}/vms/{{ uuid }}/set_power_state"
+        validate_certs: no
+        force_basic_auth: yes
+        method: POST
+        status_code: 200, 201
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        body_format: json
+        body:
+          transition: "{{ state }}"
+        return_content: yes

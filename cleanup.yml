@@ -1,0 +1,10 @@
+---
+- name: Clean up VM
+  hosts: all
+  gather_facts: false
+  become: yes
+  become_user: root
+
+  tasks:    
+    - name: remove cloudconfig swap
+      lineinfile: path=/etc/fstab regexp="\/dev\/mapper\/centos-swap.*sw,comment=cloudconfig.*" state=absent

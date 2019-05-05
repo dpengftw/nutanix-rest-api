@@ -1,0 +1,184 @@
+---
+- name: Create VM in Nutanix
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  vars_files:
+    - ../../inventory/common/vault-common-vars.yml
+
+  vars: 
+    state: "on"
+    passwd_gen: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters') }}"
+
+  vars_prompt:
+    - name: selection
+      prompt: "Select cluster to deploy to"
+      private: no
+
+  tasks:
+    - name: set the url of the cluster
+      set_fact: base_url="https://{{ nutanixcluster[selection | int] }}:9440/PrismGateway/services/rest/v2.0"
+
+    - name: save the hostname as a variable
+      set_fact:
+        key: "{{ inventory_hostname }}"
+
+    - name: determine ip of hostname
+      shell: host {{ inventory_hostname }} | grep address | awk '{print $4}'
+      register: hostnameip
+
+    - name: determine ip of storage interface
+      shell: host "{{ inventory_hostname_short }}.nas" | grep address | awk '{print $4}'
+      register: hostnamestorageip
+
+    - name: determine fqdn of hostname
+      shell: host {{ inventory_hostname }} | grep address | awk '{print $1}'
+      register: hostnamefqdn
+
+    - name: determine if machine is online
+      command: ping -c 2 {{ inventory_hostname }}
+      register: online
+      ignore_errors: true
+
+    - fail: msg="ERROR {{ inventory_hostname }} is online, exiting"
+      when: online.rc == 0 
+
+    - name: get all hosts
+      uri:
+        url: "{{ base_url }}/vms/"
+        validate_certs: no
+        force_basic_auth: yes
+        method: GET
+        status_code: 200
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        body_format: json
+        return_content: yes
+      register: hostinfo
+      run_once: true
+
+    - name: determine if host is already created
+      set_fact: uuid="{{ item.uuid }}"
+      when: inventory_hostname == item.name
+      with_items: "{{ hostinfo.json.entities }}"
+
+    - name: generate a password
+      set_fact:
+        password: "{{ passwd_gen }}"
+      no_log: true
+      
+    - name: create cloud init file
+      template: src=templates/cloud_init.j2 dest=/tmp/cloud_init.{{ hostnamefqdn.stdout_lines[0] }}
+      delegate_to: localhost
+      no_log: true
+      when: online.rc != 0 and hostnamefqdn is defined and uuid is not defined
+
+    - name: create vm for single nic
+      uri:
+        url: "{{ base_url }}/vms/"
+        validate_certs: no
+        force_basic_auth: yes
+        method: POST
+        status_code: 200, 201
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        return_content: yes
+        body:
+          name: "{{ inventory_hostname }}"
+          memory_mb: "{{ nutanix.mem }}"
+          num_vcpus: "{{ nutanix.cpu }}"
+          num_cores_per_vcpu: "{{ nutanix.cores }}"
+          hypervisorType: Acropolis
+          description: "{{ inventory_hostname }}"
+          vm_customization_config:
+            userdata: "{{ lookup('file', '/tmp/cloud_init.' + hostnamefqdn.stdout_lines[0]) }}"
+          vm_disks:
+            - is_cdrom: false
+              vm_disk_clone:
+                disk_address:
+                  vmdisk_uuid: "{{ nutanix.vmdisk[selection | int] }}"
+          vm_nics:
+            - network_uuid: "{{ nutanixnet.networkuuid[selection | int] }}"
+        body_format: json
+      when: online.rc != 0 and hostnamefqdn is defined and uuid is not defined and hostnamestorageip.stdout == ""
+      register: createsinglenicinfo
+
+    - name: create vm for dual nic
+      uri:
+        url: "{{ base_url }}/vms/"
+        validate_certs: no
+        force_basic_auth: yes
+        method: POST
+        status_code: 200, 201
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        return_content: yes
+        body:
+          name: "{{ inventory_hostname }}"
+          memory_mb: "{{ nutanix.mem }}"
+          num_vcpus: "{{ nutanix.cpu }}"
+          num_cores_per_vcpu: "{{ nutanix.cores }}"
+          hypervisorType: Acropolis
+          description: "{{ inventory_hostname }}"
+          vm_customization_config:
+            userdata: "{{ lookup('file', '/tmp/cloud_init.' + hostnamefqdn.stdout_lines[0]) }}"
+          vm_disks:
+            - is_cdrom: false
+              vm_disk_clone:
+                disk_address:
+                  vmdisk_uuid: "{{ nutanix.vmdisk[selection | int] }}"
+          vm_nics:
+            - network_uuid: "{{ nutanixnet.networkuuid[selection | int] }}"
+            - network_uuid: "{{ nutanixnetstorage.networkuuid[selection | int] }}"
+        body_format: json
+      when: online.rc != 0 and hostnamefqdn is defined and uuid is not defined and nutanixnetstorage is defined and hostnamestorageip.stdout != ""
+      register: createdualnicinfo
+      
+    - name: set createinfo for single nic
+      set_fact:
+        createinfo: "{{ createsinglenicinfo }}"
+      when: createsinglenicinfo is defined and createsinglenicinfo.skipped is not defined
+
+    - name: set createinfo for dual nic
+      set_fact:
+        createinfo: "{{ createdualnicinfo }}"
+      when: createdualnicinfo is defined and createdualnicinfo.skipped is not defined
+
+    - name: find status of create job
+      uri:
+        url: "{{ base_url }}/tasks/{{ createinfo.json.task_uuid }}"
+        validate_certs: no
+        force_basic_auth: yes
+        method: GET
+        status_code: 200
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        return_content: yes
+      when: online.rc != 0 and createinfo is defined and uuid is not defined
+      register: taskinfo
+      until: taskinfo.json.percentage_complete == 100
+      poll: 15
+
+    - name: remove cloud-init file
+      file: dest=/tmp/cloud_init.{{ hostnamefqdn.stdout_lines[0] }} state=absent
+      delegate_to: localhost
+
+    - name: grab the uuid of the new vm
+      set_fact: uuid="{{ taskinfo.json.entity_list[0].entity_id }}"
+      when: online.rc != 0 and taskinfo is defined
+
+    - name: power host
+      uri:
+        url: "{{ base_url }}/vms/{{ uuid }}/set_power_state"
+        validate_certs: no
+        force_basic_auth: yes
+        method: POST
+        status_code: 200, 201
+        user: "{{ nutella_username }}"
+        password: "{{ nutella_pass }}"
+        body_format: json
+        body:
+          transition: "{{ state }}"
+        return_content: yes
+      when: online.rc != 0 and taskinfo is defined
