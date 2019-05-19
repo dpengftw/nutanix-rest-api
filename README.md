@@ -50,9 +50,11 @@ Upload an ISO to the Nutanix Image.  I used CentOS 7 minimal in this case, but y
 ![ISO upload](imageupload.png)
 
 Create a VM and go through a base install of the ISO.  Enable cloud-init and any required modules.
-Find the vmdisk's UUID by logging into Nutanix CVM via ssh.
+The VM that you create is listed in the VM tables.  Note the name of the VM, which will be used in the next step.
 
 ![VM list](vmlist.png)
+
+Find the vmdisk's UUID by logging into Nutanix CVM via ssh.
 
 ```
 ssh nutanixc1 -l nutanixbot
