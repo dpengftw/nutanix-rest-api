@@ -3,57 +3,62 @@ Creates consistent VMs via Nutanix REST API calls
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+
+```
+git clone git@github.com:jedioncrk/nutanix-rest-api.git
+```
 
 ### Prerequisites
 
 What things you need to install the software and how to install them
 
-```
-Give examples
-```
+- Nutanix cluster setup
+- Cluster admin bot user
+- Define base image via ISO, preferably with cloud-init enabled (CentOS 7 in my case)
+- Define networks in Nutanix
 
-### Installing
+## Define Nutanix Cluster(s)
 
-A step by step series of examples that tell you how to get a development env running
+Enter the hostname of the cluster address of Nutanix as a list under the nutanixcluster variable in group_vars/all.yml.
 
-Say what the step will be
+## Cluster Admin User
 
-```
-Give the example
-```
-
-And repeat
+Create an admin bot user so that REST API calls can authenticate.  Define these variables:
 
 ```
-until finished
+nutanix_username: "nutanixbot"
+nutanix_pwd: "nutanix4/u"
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
-
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
+Encrypt the credentials
 
 ```
-Give an example
+ansible-vault encrypt vault-password-file.yml
 ```
 
-### And coding style tests
+## Define Base Image
 
-Explain what these tests test and why
+Upload an ISO to the Nutanix Image.  I use CentOS 7 minimal in this case, but you can use your preferred ISO.
+Create a VM and go through a base install of the ISO.  Enable cloud-init and any required modules.
+Find the vmdisk's UUID by logging into Nutanix CVM via ssh.
 
 ```
-Give an example
+ssh nutanixc1 -l nutanixbot
+acli vm.disk_get <name of VM>
 ```
 
-## Deployment
+Enter the vmdisk's UUID into group_vars/all.yml under the nutanix.vmdisk as a list.  This should match with the cluster list.
 
-Add additional notes about how to deploy this on a live system
+## Define Networks
+
+Find the network's UUID by logging into Nutanix CVM via ssh.
+
+```
+ssh nutanixc1 -l nutanixbot
+acli net.list
+```
+Enter the network's UUID into group_vars/all.yml.
 
 ## Authors
 

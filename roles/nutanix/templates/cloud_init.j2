@@ -4,20 +4,7 @@ fqdn: {{ inventory_hostname }}
 manage_resolv_conf: true
 
 resolv_conf:
-{% if userdata.LD_LOC == 'pa' %}
-  nameservers: ['10.1.10.227', '10.1.10.228']
-{% endif %}
-{% if userdata.LD_LOC == 'slo' %}
-  nameservers: ['172.18.30.201', '172.18.30.202']
-{% endif %}
-{% if userdata.LD_LOC == 'phx' %}
-  nameservers: ['172.30.30.201', '172.30.30.202']
-{% endif %}
-{% if userdata.LD_LOC == 'snv' %}
-  nameservers: ['192.168.30.201', '192.168.30.202']
-{% endif %}
-  searchdomains:
-    - {{ userdata.LD_LOC }}.cashview.com
+  nameservers: ['{{ nutanixnet.nameservers[0] }}', '{{ nutanixnet.nameservers[1] }}']
   options:
     rotate: true
     timeout: 1
@@ -27,11 +14,7 @@ write_files:
   content: |
     DEVICE=eth0
     BOOTPROTO="none"
-{% if userdata.LD_LOC == 'pa' %}
-    NETMASK="255.255.0.0"
-{% else %}
     NETMASK="255.255.255.0"
-{% endif %}
     IPADDR="{{ hostnameip.stdout_lines[0] }}"
     GATEWAY="{{ nutanixnet.gateway }}"
     ONBOOT="yes"
@@ -48,12 +31,10 @@ write_files:
 {% endif %}
 ssh_pwauth: true
 
-{% if userdata.LD_LOC == 'phx' or userdata.LD_LOC == 'snv' %}
 chpasswd:
   list: |
     root:{{ password }}
   expire: false
-{% endif %}
 
 runcmd:
 - [ifdown, eth0]

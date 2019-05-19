@@ -5,7 +5,7 @@
   connection: local
 
   vars_files:
-    - ../../inventory/common/vault-common-vars.yml
+    - vault-password-file.yml
 
   vars: 
     state: "on"
@@ -51,8 +51,8 @@
         force_basic_auth: yes
         method: GET
         status_code: 200
-        user: "{{ nutella_username }}"
-        password: "{{ nutella_pass }}"
+        user: "{{ nutanix_username }}"
+        password: "{{ nutanix_pwd }}"
         body_format: json
         return_content: yes
       register: hostinfo
@@ -81,8 +81,8 @@
         force_basic_auth: yes
         method: POST
         status_code: 200, 201
-        user: "{{ nutella_username }}"
-        password: "{{ nutella_pass }}"
+        user: "{{ nutanix_username }}"
+        password: "{{ nutanix_pwd }}"
         return_content: yes
         body:
           name: "{{ inventory_hostname }}"
@@ -111,8 +111,8 @@
         force_basic_auth: yes
         method: POST
         status_code: 200, 201
-        user: "{{ nutella_username }}"
-        password: "{{ nutella_pass }}"
+        user: "{{ nutanix_username }}"
+        password: "{{ nutanix_pwd }}"
         return_content: yes
         body:
           name: "{{ inventory_hostname }}"
@@ -152,8 +152,8 @@
         force_basic_auth: yes
         method: GET
         status_code: 200
-        user: "{{ nutella_username }}"
-        password: "{{ nutella_pass }}"
+        user: "{{ nutanix_username }}"
+        password: "{{ nutanix_pwd }}"
         return_content: yes
       when: online.rc != 0 and createinfo is defined and uuid is not defined
       register: taskinfo
@@ -175,8 +175,8 @@
         force_basic_auth: yes
         method: POST
         status_code: 200, 201
-        user: "{{ nutella_username }}"
-        password: "{{ nutella_pass }}"
+        user: "{{ nutanix_username }}"
+        password: "{{ nutanix_pwd }}"
         body_format: json
         body:
           transition: "{{ state }}"

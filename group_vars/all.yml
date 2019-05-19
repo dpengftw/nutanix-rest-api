@@ -1,0 +1,21 @@
+# nutanix settings
+nutanixcluster:
+  - nutanixc1.<domain>
+  - nutanixc2.<domain>
+  
+nutanix:
+  cpu: 2
+  cores: 2
+  mem: 4096
+  vmdisk:
+    - "<vmdisk uuid>"
+    - "<vmdisk uuid>"
+
+nutanixnet:
+  networkuuid:
+    - "<network uuid>"
+    - "<network uuid>"
+  gateway: 1.2.3.4
+  nameservers:
+    - 8.8.8.8
+    - 8.8.4.4
