@@ -15,10 +15,11 @@ What things you need to install the software and how to install them
 
 - Nutanix cluster setup
 - Cluster admin bot user
+- DNS setup
 - Define base image via ISO, preferably with cloud-init enabled (CentOS 7 in my case)
 - Define networks in Nutanix
 
-## Define Nutanix Cluster(s)
+### Define Nutanix Cluster(s)
 
 Enter the hostname of the cluster address of Nutanix as a list under the nutanixcluster variable in group_vars/all.yml.
 
@@ -28,7 +29,7 @@ nutanixcluster:
   - <additional nutanix cluster hostname or IP>
 ```
 
-## Cluster Admin User
+### Cluster Admin User
 
 Create an admin bot user so that REST API calls can authenticate.  Define these variables:
 
@@ -43,7 +44,13 @@ Encrypt the credentials
 ansible-vault encrypt vault-password-file.yml
 ```
 
-## Define Base Image
+### DNS Setup
+
+The playbook does not include DNS setup, therefore depending on your network, this step is manual and differs
+from environment to environment.  The playbook is designed to not overlap VMs, therefore if another host is 
+running said VM, then the playbook will error out.
+
+### Define Base Image
 
 Upload an ISO to the Nutanix Image.  I used CentOS 7 minimal in this case, but you can use your preferred ISO.
 
@@ -86,7 +93,7 @@ scsi.0 {
 
 Take note of the last line "vmdisk_uuid".  Enter the vmdisk's UUID into group_vars/all.yml under the nutanix.vmdisk as a list.  This should match with the cluster list.
 
-## Define Networks
+### Define Networks
 
 Find the network's UUID by logging into Nutanix CVM via ssh.
 
@@ -99,7 +106,14 @@ Web           25b6663c-21cc-4adb-baa8-b3eaabf41bd2  kBridged  0
 ```
 Enter the desired network's UUID into group_vars/all.yml.  This should also match with the cluster list.
 
-## 
+## Usage
+
+After the above setup is complete, you can use ansible to deploy new VMs.
+
+```
+ansible-playbook -i <inventory file> -l <limit to host(s)> roles/nutanix/createvm.yml --ask-vault-password
+```
+
 ## Authors
 
 * **David Peng** - *Initial work*
