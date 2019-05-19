@@ -46,8 +46,13 @@ ansible-vault encrypt vault-password-file.yml
 ## Define Base Image
 
 Upload an ISO to the Nutanix Image.  I used CentOS 7 minimal in this case, but you can use your preferred ISO.
+
+![ISO upload](imageupload.png)
+
 Create a VM and go through a base install of the ISO.  Enable cloud-init and any required modules.
 Find the vmdisk's UUID by logging into Nutanix CVM via ssh.
+
+![VM list](vmlist.png)
 
 ```
 ssh nutanixc1 -l nutanixbot
