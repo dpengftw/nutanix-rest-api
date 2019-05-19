@@ -1,5 +1,5 @@
 # nutanix-rest-api
-Creates consistent VMs via Nutanix REST API calls
+Creates consistent VMs via Nutanix REST API calls with Ansible Playbook.
 
 ## Getting Started
 
